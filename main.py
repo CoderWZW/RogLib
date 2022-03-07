@@ -2,6 +2,7 @@ from attack import Attack
 from data import Data
 from utils import read_configuration
 
+
 # Robustness on Graph data
 if __name__ == '__main__':
 	# data process
@@ -10,14 +11,14 @@ if __name__ == '__main__':
 			"a" : "nettack" 
 		}
 
+	# choose a model from the model_set and get it's config
 	model = model_set["a"]
 	model_config = read_configuration("./config/data_config/" + model + ".conf")
 
 	
-
 	data = Data(model_config)
-	data.load()
-	data.process()
+	data.load() # load data
+	data.process() 
 	data.train_val_test_split()
 	#print(data.split_unlabeled)
 

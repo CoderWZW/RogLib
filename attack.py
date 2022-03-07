@@ -10,6 +10,7 @@ from model.attack.nettack import Nettack
 from matplotlib import pyplot as plt
 from utils import maxminnorm_list
 
+# the accuracy of the output
 def accuracy(output, labels):
     pred = output.max(1)[1].type_as(labels)
     correct = pred.eq(labels).double()
@@ -30,16 +31,17 @@ class Attack(object):
 	def __init__(self, config, data):
 		print("attack initialization")
 		self.data = data
-		self.attack_node = config['attack_node']
+		self.attack_node = config['attack_node'] # the node you want to attack
 		if self.attack_node in self.data.split_unlabeled:
 			print(self.attack_node + "in the test set")
+		
 
 		self.model_name = config['model_name']
-		self.direct_attack = True
+		self.direct_attack = True # set the attack way
 		self.n_influencers = 1 if self.direct_attack else 5
 		self.n_perturbations = int(self.data.degrees[int(self.attack_node)]) # How many perturbations to perform. Default: Degree of the node
-		self.perturb_features = True
-		self.perturb_structure = True
+		self.perturb_features = True # feature attack
+		self.perturb_structure = True # structure attack
 		self.retrain_iters=5
 
 		self.classification_margins_clean = []
@@ -48,14 +50,14 @@ class Attack(object):
 		self.class_distrs_retrain = []
 		#print(self.attack_node)
 
-		
+	# train a surrogate model (i.e.  GCN without nonlinear activation) used in train_base_model_without_perturbations & train_base_model_with_perturbations
 	def train_surrogate_model(self):
 		print("data process")
 		if self.model_name == 'nettack':
 			A = sparse_mx_to_torch_sparse_tensor(self.data._An)
 			X = sparse_mx_to_torch_sparse_tensor(self.data._X_obs)
 			Y = torch.LongTensor(self.data._z_obs)
-			model = GCN(self.data.sizes, X.shape[1])
+			model = GCN(self.data.sizes, X.shape[1]) # get GCN model
 			optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 			epochs = 100
 			for epoch in range(epochs):
@@ -83,12 +85,14 @@ class Attack(object):
 		#numpy.ndarray
 		print("surrogate_model trains successfully")
 
+	# attack on the surrogate model according the model_name
 	def model(self):
 		print("model training")
 		if self.model_name == 'nettack':
 			self.attack_node = int(self.attack_node)
 			self.nettack = Nettack(self.data._A_obs, self.data._X_obs, self.data._z_obs, self.W1, self.W2, self.attack_node, verbose=True)
 			self.nettack.reset()
+			# Perform an attack on the surrogate model.
 			self.nettack.attack_surrogate(self.n_perturbations, perturb_structure=self.perturb_structure, perturb_features=self.perturb_features, direct=self.direct_attack, n_influencers=self.n_influencers)
 			
 	def generate(self):
@@ -121,7 +125,7 @@ class Attack(object):
 					"acc_train: {:.4f}".format(acc_train.item()),
 					"loss_val: {:.4f}".format(loss_val.item()),
 					"acc_val: {:.4f}".format(acc_val.item()))
-				
+				# the probability of the attack node before it be attacked
 				probs_before_attack = output[self.attack_node]
 				self.class_distrs_clean.append(maxminnorm_list(probs_before_attack.detach().cpu().numpy()))
 			self.class_distrs_clean = np.array(self.class_distrs_clean)
@@ -152,13 +156,14 @@ class Attack(object):
 					"acc_train: {:.4f}".format(acc_train.item()),
 					"loss_val: {:.4f}".format(loss_val.item()),
 					"acc_val: {:.4f}".format(acc_val.item()))
-				
+				# the probability of the attack node after it be attacked
 				probs_after_attack = output[self.attack_node]
 				
 				self.class_distrs_retrain.append(maxminnorm_list(probs_after_attack.detach().cpu().numpy()))
 			self.class_distrs_retrain = np.array(self.class_distrs_retrain)
 			#print(self.class_distrs_retrain)
 	
+	# draw to show the result
 	def show(self):
 		def make_xlabel(ix, correct):
 			if ix==correct:

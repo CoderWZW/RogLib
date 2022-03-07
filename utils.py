@@ -17,6 +17,7 @@ def read_configuration(file_path):
 					print('config file is not in the correct format! Error Line:%d'%(ind))
 	return config
 
+# normalization the array by maxmin approach(matrix)
 def maxminnorm_matrix(array):
     maxcols=array.max(axis=0)
     mincols=array.min(axis=0)
@@ -28,7 +29,7 @@ def maxminnorm_matrix(array):
         t[:,i]=(array[:,i]-mincols[i])/(maxcols[i]-mincols[i])
     return t
 
-
+# normalization the array by maxmin approach(list)
 def maxminnorm_list(array):
     maxcols=array.max(axis=0)
     mincols=array.min(axis=0)
