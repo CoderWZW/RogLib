@@ -9,16 +9,16 @@ import torch.nn.functional as F
 class GraphConvolution(nn.Module):
     def __init__(self, in_features, out_features, bias=True):
         super(GraphConvolution, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.weight = nn.Parameter(torch.FloatTensor(in_features, out_features))
+        self.in_features = in_features # the feature of input
+        self.out_features = out_features # the feature of output
+        self.weight = nn.Parameter(torch.FloatTensor(in_features, out_features)) # learnable weight
         self.use_bias = bias
         if self.use_bias:
             self.bias = nn.Parameter(torch.FloatTensor(out_features))
         self.reset_parameters()
         
     def reset_parameters(self):
-        nn.init.kaiming_uniform_(self.weight)
+        nn.init.kaiming_uniform_(self.weight) # initialization
         if self.use_bias:
             nn.init.zeros_(self.bias)
     

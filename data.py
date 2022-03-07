@@ -4,25 +4,27 @@ import numpy as np
 from scipy.sparse.csgraph import connected_components
 
 class Data(object):
+    # Data initialization, get model_name and data_path from the config
     def __init__(self, config):
         print("data initialization")
         self.model_name = config['model_name']
         self.data_path = config['data_path']
         print(self.model_name)
 
-
+    # Load data from data file according the model_name
     def load(self):
         print("load data")
         if self.model_name == 'nettack':
+            # Load a SparseGraph from a Numpy binary file，get the adjacency matrix，feature matrix and labels respectively
             self._A_obs, self._X_obs, self._z_obs = load_npz(self.data_path)
 
-
+    # Processing the data according the model_name
     def process(self):
         print("data process")
         if self.model_name == 'nettack':
             
-            self._A_obs = self._A_obs + self._A_obs.T
-            self._A_obs[self._A_obs > 1] = 1
+            self._A_obs = self._A_obs + self._A_obs.T # get a symmetric graph
+            self._A_obs[self._A_obs > 1] = 1 # normalize the adjacency matrix
             lcc = largest_connected_components(self._A_obs)
 
             self._A_obs = self._A_obs[lcc][:,lcc]
@@ -36,9 +38,9 @@ class Data(object):
             self._X_obs = self._X_obs[lcc].astype('float32')
             self._z_obs = self._z_obs[lcc]
             '''
-                N：the number of nodes
-                K: the number of classes
-                An: normalization A
+                _N：the number of nodes
+                _K: the number of classes
+                _An: normalization A
                 sizes: [16, K]
                 degrees: the degree of each nodes
             '''
@@ -51,7 +53,7 @@ class Data(object):
             print(self._An, self._X_obs, self._Z_obs)
             print(type(self._An), type(self._X_obs), type(self._Z_obs))
 
-    
+    # Split the dataset as 3 parts: train, validation and test
     def train_val_test_split(self):
         seed = 15
         unlabeled_share = 0.8
@@ -84,6 +86,7 @@ def load_npz(file_name):
         file_name += '.npz'
     with np.load(file_name,allow_pickle=True) as loader:
         loader = dict(loader,allow_pickle=True)
+        # Compressed Sparse Row matrix
         adj_matrix = sp.csr_matrix((loader['adj_data'], loader['adj_indices'],
                                               loader['adj_indptr']), shape=loader['adj_shape'])
 
@@ -113,9 +116,11 @@ def largest_connected_components(adj, n_components=1):
         Subgraph of the input graph where only the nodes in largest n_components are kept.
 
     """
+    # Get the number of connected components '_' 
+    # and the length-N array of labels of the connected components 'component_indices' respectively
     _, component_indices = connected_components(adj)
-    component_sizes = np.bincount(component_indices)
-    components_to_keep = np.argsort(component_sizes)[::-1][:n_components]  # reverse order to sort descending
+    component_sizes = np.bincount(component_indices) 
+    components_to_keep = np.argsort(component_sizes)[::-1][:n_components]  # reverse order to sort descending, and get the fist(largest) one
     nodes_to_keep = [
         idx for (idx, component) in enumerate(component_indices) if component in components_to_keep
 
@@ -174,8 +179,10 @@ def train_val_test_split_tabular(*arrays, train_size=0.5, val_size=0.3, test_siz
     return result
 
 def preprocess_graph(adj):
+    # adj_ is the adjacency matrix of the (undirected) input graph 𝐺 after adding self-loops via the identity matrix I_N(sp.eye(adj.shape[0]))
     adj_ = adj + sp.eye(adj.shape[0])
     rowsum = adj_.sum(1).A1
     degree_mat_inv_sqrt = sp.diags(np.power(rowsum, -0.5))
+    # This is corresponding to the part of formula 1 in the paper D^(-1/2)AD^(-1/2)
     adj_normalized = adj_.dot(degree_mat_inv_sqrt).T.dot(degree_mat_inv_sqrt).tocsr()
     return adj_normalized
